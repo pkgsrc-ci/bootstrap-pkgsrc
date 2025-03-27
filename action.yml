@@ -1,0 +1,63 @@
+#
+# Bootstrap a pkgsrc prefix, supporting cached artifacts.
+#
+name: bootstrap pkgsrc
+author: pkgsrc-ci
+description: Bootstrap a pkgsrc prefix
+branding:
+  icon: package
+  color: orange
+inputs:
+  platform:
+    description: Unique platform string
+    required: true
+  hash:
+    description: Unique hash for this bootstrap kit
+    required: true
+  bootstrap_args:
+    description: Additional bootstrap arguments
+    type: string
+  bootstrap_tar:
+    description: Name of bootstrap tarball
+    type: string
+    default: bootstrap.tar
+  make_jobs:
+    description: Number of MAKE_JOBS to use
+    type: number
+    default: 4
+  path:
+    description: $PATH to set
+    type: string
+    default: /sbin:/bin:/usr/sbin:/usr/bin
+  prefix:
+    description: Bootstrap prefix
+    type: string
+    default: /usr/pkg
+  unprivileged:
+    description: Whether this bootstrap should use --unprivileged
+    type: boolean
+    default: true
+runs:
+  using: composite
+  steps:
+    - name: Check for cached bootstrap kit
+      id: bootstrap-kit
+      uses: actions/cache@v4
+      with:
+        key: bootstrap-kit-${{ inputs.platform }}-${{ inputs.hash }}
+        # Must live in checkout dir due to actions/cache limitations.
+        path: ${{ inputs.bootstrap_tar }}
+    # Note that "actions/cache" above will look for and save bootstrap.tar
+    # automatically after this action finishes.
+    - name: Bootstrap if required
+      if: steps.bootstrap-kit.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        CI_BOOTSTRAP_ARGS: ${{ inputs.bootstrap_args }}
+        CI_BOOTSTRAP_TAR: ${{ inputs.bootstrap_tar }}
+        CI_MAKE_JOBS: ${{ inputs.make_jobs }}
+        CI_PREFIX: ${{ inputs.prefix }}
+        CI_SYSTEM_PATH: ${{ inputs.path }}
+        CI_UNPRIVILEGED: ${{ inputs.unprivileged }}
+      run: |
+        ./bootstrap.sh
