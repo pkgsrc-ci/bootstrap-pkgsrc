@@ -60,4 +60,6 @@ runs:
         CI_SYSTEM_PATH: ${{ inputs.path }}
         CI_UNPRIVILEGED: ${{ inputs.unprivileged }}
       run: |
+        pwd
+        ls
         ./bootstrap.sh
