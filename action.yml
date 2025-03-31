@@ -28,7 +28,6 @@ inputs:
   prefix:
     description: Bootstrap prefix
     type: string
-    default: /usr/pkg
   unprivileged:
     description: Whether this bootstrap should use --unprivileged
     type: boolean
@@ -72,16 +71,17 @@ runs:
         set -x
         if ${BS_UNPRIVILEGED}; then
           SUDO=
-          UNPRIV="--unprivileged"
+          UNPRIV_ARG="--unprivileged"
         else
           SUDO=sudo
-          UNPRIV=
+          UNPRIV_ARG=
         fi
         PATH="${BS_PATH}"
-        # Unwrap quoting of e.g. BS_PREFIX='${HOME}/pkg'
-        PREFIX_ARG=--prefix=${BS_PREFIX}
+        if [ -n "${BS_PREFIX}" ]; then
+            PREFIX_ARG=--prefix=${BS_PREFIX}
+        fi
         cd ${GITHUB_WORKSPACE}/bootstrap
-        ${SUDO} ${BS_BOOTSTRAP_ENV} ./bootstrap ${UNPRIV} ${PREFIX_ARG} \
+        ${SUDO} ${BS_BOOTSTRAP_ENV} ./bootstrap ${UNPRIV_ARG} ${PREFIX_ARG} \
             --binary-kit=${GITHUB_WORKSPACE}/bootstrap.tar \
             --make-jobs=${BS_MAKE_JOBS} \
             --mk-fragment=${GITHUB_WORKSPACE}/include-fragment.mk \
