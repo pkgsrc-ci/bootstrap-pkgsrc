@@ -84,5 +84,5 @@ runs:
             --make-jobs=${BS_MAKE_JOBS} \
             --mk-fragment=${GITHUB_WORKSPACE}/include-fragment.mk \
             --prefix=${BS_PREFIX} \
-            --workdir=${GITHUB_WORKSPACE} \
+            --workdir=${GITHUB_WORKSPACE}/work.bootstrap \
             ${BS_BOOTSTRAP_ARGS}
