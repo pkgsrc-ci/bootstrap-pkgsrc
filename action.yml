@@ -53,7 +53,7 @@ runs:
         X11_TYPE=			modular
         EOF
     - name: Append custom mk.conf settings
-      if:  ${{ inputs.mk_append != '' }
+      if:  ${{ inputs.mk_append != '' }}
       shell: bash
       run: |
         for var in ${{ inputs.mk_append }}; do
