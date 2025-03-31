@@ -78,11 +78,12 @@ runs:
           UNPRIV=
         fi
         PATH="${BS_PATH}"
+        # Unwrap quoting of e.g. BS_PREFIX='${HOME}/pkg'
+        PREFIX_ARG=--prefix=${BS_PREFIX}
         cd ${GITHUB_WORKSPACE}/bootstrap
-        ${SUDO} ${BS_BOOTSTRAP_ENV} ./bootstrap ${UNPRIV} \
+        ${SUDO} ${BS_BOOTSTRAP_ENV} ./bootstrap ${UNPRIV} ${PREFIX_ARG} \
             --binary-kit=${GITHUB_WORKSPACE}/bootstrap.tar \
             --make-jobs=${BS_MAKE_JOBS} \
             --mk-fragment=${GITHUB_WORKSPACE}/include-fragment.mk \
-            --prefix=${BS_PREFIX} \
             --workdir=${GITHUB_WORKSPACE}/work.bootstrap \
             ${BS_BOOTSTRAP_ARGS}
