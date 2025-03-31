@@ -1,5 +1,5 @@
 #
-# Bootstrap a pkgsrc prefix, supporting cached artifacts.
+# Bootstrap a pkgsrc prefix.
 #
 name: bootstrap pkgsrc
 author: pkgsrc-ci
@@ -8,23 +8,19 @@ branding:
   icon: package
   color: orange
 inputs:
-  platform:
-    description: Unique platform string
-    required: true
-  hash:
-    description: Unique hash for this bootstrap kit
-    required: true
   bootstrap_args:
     description: Additional bootstrap arguments
     type: string
-  bootstrap_tar:
-    description: Name of bootstrap tarball
+  bootstrap_env:
+    description: Additional bootstrap environment variables
     type: string
-    default: bootstrap.tar
   make_jobs:
     description: Number of MAKE_JOBS to use
     type: number
     default: 4
+  mk_append:
+    description: Additional mk.conf settings
+    type: string
   path:
     description: $PATH to set
     type: string
@@ -40,26 +36,52 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Check for cached bootstrap kit
-      id: bootstrap-kit
-      uses: actions/cache@v4
-      with:
-        key: bootstrap-kit-${{ inputs.platform }}-${{ inputs.hash }}
-        # Must live in checkout dir due to actions/cache limitations.
-        path: ${{ inputs.bootstrap_tar }}
-    # Note that "actions/cache" above will look for and save bootstrap.tar
-    # automatically after this action finishes.
-    - name: Bootstrap if required
-      if: steps.bootstrap-kit.outputs.cache-hit != 'true'
+    - name: Generate default include-fragment.mk
+      shell: bash
+      run: |
+        #
+        # These variables are common to all builds.
+        #
+        cat >${GITHUB_WORKSPACE}/include-fragment.mk <<-EOF
+        ALLOW_VULNERABLE_PACKAGES=	yes
+        FAILOVER_FETCH=			yes
+        MAKE_JOBS=			${{ inputs.make_jobs }}
+        NO_PKGTOOLS_REQD_CHECK=		yes
+        PKG_DEVELOPER=			yes
+        SKIP_LICENSE_CHECK=		yes
+        USE_INDIRECT_DEPENDS=		yes
+        X11_TYPE=			modular
+        EOF
+    - name: Append custom mk.conf settings
+      if:  ${{ inputs.mk_append != '' }
+      shell: bash
+      run: |
+        for var in ${{ inputs.mk_append }}; do
+          echo ${var} >> ${GITHUB_WORKSPACE}/include-fragment.mk
+        done
+    - name: Bootstrap pkgsrc
       shell: bash
       env:
-        CI_BOOTSTRAP_ARGS: ${{ inputs.bootstrap_args }}
-        CI_BOOTSTRAP_TAR: ${{ inputs.bootstrap_tar }}
-        CI_MAKE_JOBS: ${{ inputs.make_jobs }}
-        CI_PREFIX: ${{ inputs.prefix }}
-        CI_SYSTEM_PATH: ${{ inputs.path }}
-        CI_UNPRIVILEGED: ${{ inputs.unprivileged }}
+        BS_BOOTSTRAP_ARGS: ${{ inputs.bootstrap_args }}
+        BS_BOOTSTRAP_ENV: ${{ inputs.bootstrap_env }}
+        BS_MAKE_JOBS: ${{ inputs.make_jobs }}
+        BS_PREFIX: ${{ inputs.prefix }}
+        BS_PATH: ${{ inputs.path }}
+        BS_UNPRIVILEGED: ${{ inputs.unprivileged }}
       run: |
-        pwd
-        ls
-        ./bootstrap.sh
+        if ${BS_UNPRIVILEGED}; then
+          SUDO=
+          UNPRIV="--unprivileged"
+        else
+          SUDO=sudo
+          UNPRIV=
+        fi
+        PATH="${BS_SYSTEM_PATH}"
+        cd ${GITHUB_WORKSPACE}/bootstrap
+        ${SUDO} ${BS_BOOTSTRAP_ENV} ./bootstrap ${UNPRIV} \
+            --binary-kit=${GITHUB_WORKSPACE}/bootstrap.tar \
+            --make-jobs=${BS_MAKE_JOBS} \
+            --mk-fragment=${GITHUB_WORKSPACE}/include-fragment.mk \
+            --prefix=${BS_PREFIX} \
+            --workdir=${GITHUB_WORKSPACE} \
+            ${BS_BOOTSTRAP_ARGS}
